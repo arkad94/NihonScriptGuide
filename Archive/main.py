@@ -2,15 +2,13 @@
 """
 Generate a PPTX presentation guiding Tamil speakers through
 Japanese Hiragana and Katakana, including dakuten (が, ぎ, ぐ...) 
-and handakuten (ぱ, ぴ, ぷ...). The script reads Romaji/Tamil
-mappings from a CSV file, so changes in the CSV reflect in output.
+and handakuten (ぱ, ぴ, ぷ...), with improved sizing so slides
+do not overflow in a 16:9 layout.
 
 We use 'Option 2': Hardcode the slide width & height in inches
-(13.333" x 7.5") for 16:9, instead of retrieving them from
-the Presentation object.
+(13.333" x 7.5") instead of retrieving them from the Presentation object.
 """
 
-import csv
 from pptx import Presentation
 from pptx.util import Inches, Pt
 from pptx.enum.text import PP_ALIGN
@@ -65,28 +63,49 @@ KATAKANA_DAKUTEN_TABLE = [
 ]
 
 ################################################################
-# 3) We'll create a dictionary at runtime from CSV
+# 3) Romaji + Tamil Mappings
 ################################################################
-ROMAJI_TAMIL_MAP = {}
+ROMAJI_TAMIL_MAP = {
+    # Basic Hiragana
+    "あ": ("A","அ"),  "か": ("Ka","க"),  "さ": ("Sa","ச"),  "た": ("Ta","த"),  "な": ("Na","ந"),
+    "は": ("Ha","ஹ"), "ま": ("Ma","ம"),  "や": ("Ya","ய"),  "ら": ("Ra","ற"),  "わ": ("Wa","வ"),
+    "い": ("I","இ"),  "き": ("Ki","கி"), "し": ("Shi","சி"),"ち": ("Chi","தி"),"に": ("Ni","நி"),
+    "ひ": ("Hi","ஹி"),"み": ("Mi","மி"), "り": ("Ri","றி"),
+    "う": ("U","உ"),  "く": ("Ku","கு"), "す": ("Su","சு"), "つ": ("Tsu","து"),"ぬ": ("Nu","நு"),
+    "ふ": ("Fu","ஹு"),"む": ("Mu","மு"), "ゆ": ("Yu","யு"), "る": ("Ru","று"),
+    "え": ("E","எ"),  "け": ("Ke","கே"),"せ": ("Se","செ"), "て": ("Te","தே"),"ね": ("Ne","நே"),
+    "へ": ("He","ஹே"),"め": ("Me","மே"), "れ": ("Re","றே"),
+    "お": ("O","ஒ"),  "こ": ("Ko","கொ"),"そ": ("So","சொ"), "と": ("To","தொ"),"の": ("No","நொ"),
+    "ほ": ("Ho","ஹொ"),"も": ("Mo","மொ"), "よ": ("Yo","யொ"), "ろ": ("Ro","றொ"), "を": ("Wo","வொ"),
+    "ん": ("N","ன்"),
 
-def load_mapping_from_csv(csv_path):
-    """
-    Reads a CSV with columns: hiragana, katakana, tamil, romaji
-    and populates the global ROMAJI_TAMIL_MAP so that:
-      ROMAJI_TAMIL_MAP[hira] = (romaji, tamil)
-      ROMAJI_TAMIL_MAP[kata] = (romaji, tamil)
-    """
-    with open(csv_path, mode="r", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            hira = row["hiragana"].strip()
-            kata = row["katakana"].strip()
-            tam  = row["tamil"].strip()
-            rom  = row["romaji"].strip()
+    # Basic Katakana
+    "ア": ("A","அ"),  "カ": ("Ka","க"),  "サ": ("Sa","ச"),  "タ": ("Ta","த"),  "ナ": ("Na","ந"),
+    "ハ": ("Ha","ஹ"), "マ": ("Ma","ம"),  "ヤ": ("Ya","ய"),  "ラ": ("Ra","ற"),  "ワ": ("Wa","வ"),
+    "イ": ("I","இ"),  "キ": ("Ki","கி"), "シ": ("Shi","சி"),"チ": ("Chi","தி"),"ニ": ("Ni","நி"),
+    "ヒ": ("Hi","ஹி"),"ミ": ("Mi","மி"), "リ": ("Ri","றி"),
+    "ウ": ("U","உ"),  "ク": ("Ku","கு"), "ス": ("Su","சு"), "ツ": ("Tsu","து"),"ヌ": ("Nu","நு"),
+    "フ": ("Fu","ஹு"),"ム": ("Mu","மு"), "ユ": ("Yu","யு"), "ル": ("Ru","று"),
+    "エ": ("E","எ"),  "ケ": ("Ke","கே"),"セ": ("Se","செ"), "テ": ("Te","தே"),"ネ": ("Ne","நே"),
+    "ヘ": ("He","ஹே"),"メ": ("Me","மே"), "レ": ("Re","றே"),
+    "オ": ("O","ஒ"),  "コ": ("Ko","கொ"),"ソ": ("So","சொ"), "ト": ("To","தொ"),"ノ": ("No","நொ"),
+    "ホ": ("Ho","ஹொ"),"モ": ("Mo","மொ"), "ヨ": ("Yo","யொ"), "ロ": ("Ro","றொ"), "ヲ": ("Wo","வொ"),
+    "ン": ("N","ன்"),
 
-            # For each line, store for both hiragana and katakana
-            ROMAJI_TAMIL_MAP[hira] = (rom, tam)
-            ROMAJI_TAMIL_MAP[kata] = (rom, tam)
+    # Hiragana Dakuten
+    "が": ("Ga","க"), "ぎ": ("Gi","கி"), "ぐ": ("Gu","கு"), "げ": ("Ge","கே"), "ご": ("Go","கொ"),
+    "ざ": ("Za","ச"), "じ": ("Ji","சி"), "ず": ("Zu","சு"), "ぜ": ("Ze","சே"), "ぞ": ("Zo","சொ"),
+    "だ": ("Da","த"), "ぢ": ("Ji","தி"), "づ": ("Zu","து"), "で": ("De","தே"), "ど": ("Do","தொ"),
+    "ば": ("Ba","ப"), "び": ("Bi","பி"), "ぶ": ("Bu","பு"), "べ": ("Be","பே"), "ぼ": ("Bo","பொ"),
+    "ぱ": ("Pa","ப"), "ぴ": ("Pi","பி"), "ぷ": ("Pu","பு"), "ぺ": ("Pe","பே"), "ぽ": ("Po","பொ"),
+
+    # Katakana Dakuten
+    "ガ": ("Ga","க"), "ギ": ("Gi","கி"), "グ": ("Gu","கு"), "ゲ": ("Ge","கே"), "ゴ": ("Go","கொ"),
+    "ザ": ("Za","ச"), "ジ": ("Ji","சி"), "ズ": ("Zu","சு"), "ゼ": ("Ze","சே"), "ゾ": ("Zo","சொ"),
+    "ダ": ("Da","த"), "ヂ": ("Ji","தி"), "ヅ": ("Zu","து"), "デ": ("De","தே"), "ド": ("Do","தொ"),
+    "バ": ("Ba","ப"), "ビ": ("Bi","பி"), "ブ": ("Bu","பு"), "ベ": ("Be","பே"), "ボ": ("Bo","பொ"),
+    "パ": ("Pa","ப"), "ピ": ("Pi","பி"), "プ": ("Pu","பு"), "ペ": ("Pe","பே"), "ポ": ("Po","பொ"),
+}
 
 ################################################################
 # 4) Series for Focus Slides
@@ -127,26 +146,22 @@ def create_table_for_syllabary(
     font_sub=14
 ):
     """
-    Creates a table on the given slide (chart style).
+    Creates a table on the given slide. We do NOT retrieve slide dimensions
+    from 'slide' or 'prs' (to avoid the .presentation error). Instead, we rely on
+    SLIDE_WIDTH_INCHES / SLIDE_HEIGHT_INCHES for auto-scaling.
+
     Each cell shows:
       - Big script char on top
-      - Smaller line with (Romaji | Tamil) below
-
-    We do NOT retrieve slide dimensions from 'slide' or 'prs'.
-    Instead, we rely on SLIDE_WIDTH_INCHES / SLIDE_HEIGHT_INCHES
-    for simple auto-scaling.
-
-    If the user modifies or extends the CSV, the dictionary
-    will reflect those changes automatically, so new lines
-    appear or missing lines show blank.
+      - Smaller line with Romaji | Tamil below
     """
+    # Hard-coded 16:9 slide inches
     slide_width_in = SLIDE_WIDTH_INCHES
     slide_height_in = SLIDE_HEIGHT_INCHES
 
     rows = len(table_data)
     cols = max(len(r) for r in table_data) if rows > 0 else 0
 
-    # Title
+    # Title at top
     title_shape = slide.shapes.add_textbox(
         Inches(left),
         Inches(top),
@@ -159,29 +174,29 @@ def create_table_for_syllabary(
     tf.paragraphs[0].runs[0].font.size = Pt(font_main + 6)
     tf.paragraphs[0].runs[0].font.bold = True
 
-    # Table position below the title
+    # Start the table below the title
     table_top = top + 0.7
     table_left = left
     table_width = col_width * cols
     table_height = row_height * rows
 
-    # Simple scaling if table too wide:
-    margin_w = 1.0  
+    # Simple scaling approach if table is too wide:
+    margin_w = 1.0  # total left+right margin in inches
     available_w = slide_width_in - margin_w
-    if table_width > available_w:
+    if (table_width > available_w):
         scale_factor = available_w / table_width
         col_width *= scale_factor
         table_width = col_width * cols
 
     # Similarly for height
-    margin_h = 1.5  
+    margin_h = 1.5  # top + bottom margin
     available_h = slide_height_in - margin_h
-    if table_height > available_h:
+    if (table_height > available_h):
         scale_factor_h = available_h / table_height
         row_height *= scale_factor_h
         table_height = row_height * rows
 
-    # Create the table
+    # Now create the actual table
     graphic_frame = slide.shapes.add_table(
         rows, cols,
         Inches(table_left),
@@ -205,13 +220,11 @@ def create_table_for_syllabary(
                 cell.text = ""
                 continue
 
-            # Pull romaji/tamil from the dictionary
             romaji, tamil = ROMAJI_TAMIL_MAP.get(char, ("", ""))
-
             cell.text_frame.clear()
             cell.text_frame.vertical_anchor = MSO_VERTICAL_ANCHOR.MIDDLE
 
-            # Big script char
+            # 1) Big character
             p1 = cell.text_frame.add_paragraph()
             p1.text = char
             p1.alignment = PP_ALIGN.CENTER
@@ -219,7 +232,7 @@ def create_table_for_syllabary(
             run1.font.size = Pt(font_main)
             run1.font.bold = True
 
-            # Smaller line: Romaji | Tamil
+            # 2) Smaller line: Romaji | Tamil
             p2 = cell.text_frame.add_paragraph()
             p2.text = f"{romaji}  |  {tamil}"
             p2.alignment = PP_ALIGN.CENTER
@@ -239,7 +252,7 @@ def create_centered_textbox(
     alignment=PP_ALIGN.CENTER
 ):
     """
-    Creates a textbox shape on the slide, centered horizontally & vertically,
+    Creates a textbox shape on the given slide, centered horizontally & vertically,
     with the given font size & boldness.
     """
     textbox = slide.shapes.add_textbox(
@@ -264,19 +277,14 @@ def create_centered_textbox(
 # 6) Main Generation Logic
 ################################################################
 def main():
-    # 1) Load the CSV for mappings
-    load_mapping_from_csv("mapping.csv")  # Adjust path as needed
-
-    # 2) Setup the Presentation
     prs = Presentation()
+    # Hard-code 16:9: 13.333" x 7.5" 
     prs.slide_width = Inches(SLIDE_WIDTH_INCHES)
     prs.slide_height = Inches(SLIDE_HEIGHT_INCHES)
 
     blank_layout = prs.slide_layouts[6]  # blank layout
 
-    # ----------------------------------------------------------------
-    # A) Basic Hiragana Overview
-    # ----------------------------------------------------------------
+    # 1) Basic Hiragana Overview
     slide1 = prs.slides.add_slide(blank_layout)
     create_table_for_syllabary(
         slide1,
@@ -286,17 +294,14 @@ def main():
         col_width=1.1, row_height=1.0,
         font_main=32, font_sub=14
     )
-    # Add "ん" in a separate textbox if desired
     create_centered_textbox(
         slide1,
-        f"{HIRAGANA_N}\nN | {ROMAJI_TAMIL_MAP.get(HIRAGANA_N, ('',''))[1]}",  
+        f"{HIRAGANA_N}\nN | ன்",  
         left=11.0, top=5.5, width=1.2, height=1.0,
         font_size=24, bold=False
     )
 
-    # ----------------------------------------------------------------
-    # B) Basic Katakana Overview
-    # ----------------------------------------------------------------
+    # 2) Basic Katakana Overview
     slide2 = prs.slides.add_slide(blank_layout)
     create_table_for_syllabary(
         slide2,
@@ -308,14 +313,12 @@ def main():
     )
     create_centered_textbox(
         slide2,
-        f"{KATAKANA_N}\nN | {ROMAJI_TAMIL_MAP.get(KATAKANA_N, ('',''))[1]}",
+        f"{KATAKANA_N}\nN | ன்",
         left=11.0, top=5.5, width=1.2, height=1.0,
         font_size=24, bold=False
     )
 
-    # ----------------------------------------------------------------
-    # C) Hiragana Dakuten/Handakuten
-    # ----------------------------------------------------------------
+    # 3) Hiragana Dakuten + Handakuten
     slide3 = prs.slides.add_slide(blank_layout)
     create_table_for_syllabary(
         slide3,
@@ -326,9 +329,7 @@ def main():
         font_main=32, font_sub=14
     )
 
-    # ----------------------------------------------------------------
-    # D) Katakana Dakuten/Handakuten
-    # ----------------------------------------------------------------
+    # 4) Katakana Dakuten + Handakuten
     slide4 = prs.slides.add_slide(blank_layout)
     create_table_for_syllabary(
         slide4,
@@ -339,11 +340,9 @@ def main():
         font_main=32, font_sub=14
     )
 
-    # ----------------------------------------------------------------
-    # E) Focus Slides for Basic Gojuon
-    # ----------------------------------------------------------------
+    # 5) Focus Slides for Basic Gojuon
     for (series_name, hira_list, kata_list) in GOJUON_SERIES:
-        # E1) Series Overview Slide
+        # Series Overview Slide
         overview_slide = prs.slides.add_slide(blank_layout)
         create_centered_textbox(
             overview_slide,
@@ -352,7 +351,7 @@ def main():
             width=8.0, height=1.0,
             font_size=60, bold=True
         )
-        # Show the row
+        # Show the full row
         hira_str = " ".join(hira_list)
         kata_str = " ".join(kata_list)
         create_centered_textbox(
@@ -363,12 +362,10 @@ def main():
             font_size=36, bold=False
         )
 
-        # E2) Individual Focus Slides
+        # Individual Focus Slides
         for i in range(len(hira_list)):
             h = hira_list[i]
             k = kata_list[i]
-
-            # For each char, get the romaji/tamil from the dictionary
             (romaji_h, tamil_h) = ROMAJI_TAMIL_MAP.get(h, ("", ""))
             (romaji_k, tamil_k) = ROMAJI_TAMIL_MAP.get(k, ("", ""))
 
@@ -381,7 +378,7 @@ def main():
                 width=7.0, height=1.5,
                 font_size=120, bold=True
             )
-            # Smaller Romaji | Tamil (from Hiragana or unify them)
+            # Smaller Romaji | Tamil (from Hiragana mapping)
             create_centered_textbox(
                 focus_slide,
                 f"{romaji_h} | {tamil_h}",
@@ -390,11 +387,9 @@ def main():
                 font_size=50, bold=False
             )
 
-    # ----------------------------------------------------------------
-    # F) Focus Slides for Dakuten Series
-    # ----------------------------------------------------------------
+    # 6) Focus Slides for Dakuten Series
     for (series_name, hira_list, kata_list) in DAKUTEN_SERIES:
-        # F1) Series Overview
+        # Series Overview Slide
         overview_slide = prs.slides.add_slide(blank_layout)
         create_centered_textbox(
             overview_slide,
@@ -403,6 +398,7 @@ def main():
             width=8.0, height=1.0,
             font_size=60, bold=True
         )
+        # Show the full row
         hira_str = " ".join(hira_list)
         kata_str = " ".join(kata_list)
         create_centered_textbox(
@@ -413,16 +409,15 @@ def main():
             font_size=36, bold=False
         )
 
-        # F2) Individual Focus Slides
+        # Individual Focus Slides
         for i in range(len(hira_list)):
             h = hira_list[i]
             k = kata_list[i]
-
             (romaji_h, tamil_h) = ROMAJI_TAMIL_MAP.get(h, ("", ""))
             (romaji_k, tamil_k) = ROMAJI_TAMIL_MAP.get(k, ("", ""))
 
             focus_slide = prs.slides.add_slide(blank_layout)
-            # Big top
+            # Large side-by-side
             create_centered_textbox(
                 focus_slide,
                 f"{h}    {k}",
@@ -430,7 +425,7 @@ def main():
                 width=7.0, height=1.5,
                 font_size=120, bold=True
             )
-            # Smaller bottom
+            # Smaller Romaji | Tamil
             create_centered_textbox(
                 focus_slide,
                 f"{romaji_h} | {tamil_h}",
@@ -439,9 +434,7 @@ def main():
                 font_size=50, bold=False
             )
 
-    # ----------------------------------------------------------------
-    # G) Save
-    # ----------------------------------------------------------------
+    # 7) Save
     output_name = "Japanese_Guide_for_Tamil_Speakers_v4.pptx"
     prs.save(output_name)
     print(f"Presentation saved as '{output_name}'.")
